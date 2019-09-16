@@ -172,7 +172,7 @@
 			req_times:1,
             req_proxy:'http',
 			req_host:'localhost',
-			req_uri:'/index/test/index',
+			req_uri:'',
 			input_stop:false
 		},
 		mounted:function(){
@@ -184,10 +184,10 @@
             var rmethod = localStorage.getItem('req_method');
             this.req_head = JSON.parse(rhead==null?'[]':rhead);
             this.req_body = JSON.parse(rbody==null?'[]':rbody);
-            this.req_proxy = rproxy;
-            this.req_host = rhost;
-            this.req_uri = ruri;
-            this.req_method = rmethod;
+            if(rproxy)this.req_proxy = rproxy;
+            if(rhost)this.req_host = rhost;
+            if(ruri)this.req_uri = ruri;
+            if(rmethod)this.req_method = rmethod;
 		},
 		methods:{
 			add_req_head:function(){
