@@ -1,0 +1,322 @@
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="format-detection" content="telephone=no"/>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no">
+		<meta name="App-Config" content="fullscreen=yes,useHistoryState=yes,transition=yes">
+		<meta content="yes" name="apple-mobile-web-app-capable">
+		<meta content="yes" name="apple-touch-fullscreen">
+		<title>http api test by wyne</title>
+		<script src="static/js/axios.min.js"></script>
+		<script src="static/js/vue.min.js"></script>
+		<script src="static/uikit/js/jquery.min.js"></script>
+		<script src="static/uikit/js/uikit.min.js"></script>
+		<script src="static/uikit/js/components/notify.min.js"></script>
+		<link rel="stylesheet" href="static/uikit/css/uikit.min.css"/>
+		<link rel="stylesheet" href="static/uikit/css/components/form-advanced.css"/>
+		<link rel="stylesheet" href="static/uikit/css/components/notify.min.css"/>
+	</head>
+	<body>
+		<div class="uk-grid uk-container-center">
+			<div class="uk-width-1-1">
+				<div id="vapp">
+					<form class="uk-form" onsubmit="return false;">
+						<table class="uk-table uk-text-left">
+							<caption style="font-size:2rem;">请求头(REQUEST_HEAD)</caption>
+							<thead>
+							<tr>
+								<th>应用(USED)</th>
+								<th>键(KEY)</th>
+								<th>值(VALUE)</th>
+								<th>删(DELETE)</th>
+							</tr>
+							</thead>
+							<tbody>
+							<tr v-for="(rh,index) in req_head">
+								<td><input :id="`cb_`+index" type="checkbox" v-model="rh.selected" :value="index"/> <label :for="`cb_`+index">是</label></td>
+								<td><input type="text" class="uk-form-success" v-model="rh.key"/></td>
+								<td><input type="text" class="uk-form-danger" v-model="rh.value"/></td>
+								<td><button class="uk-button uk-button-danger" @click="del_req_head(index)">删除</button></td>
+							</tr>
+							</tbody>
+							<tfoot>
+							<tr>
+								<td><button class="uk-button uk-button-primary" @click="add_req_head">添加请求头</button></td>
+							</tr>
+							</tfoot>
+						</table>
+						<table class="uk-table uk-text-left">
+							<caption style="font-size:2rem;">请求体(REQUEST_BODY)</caption>
+							<thead>
+							<tr>
+								<th>应用(USED)</th>
+								<th>键(KEY)</th>
+								<th>值(VALUE)</th>
+								<th>删(DELETE)</th>
+							</tr>
+							</thead>
+							<tbody>
+							<tr v-for="(rb,bindex) in req_body">
+								<td><input :id="`rb_`+bindex" type="checkbox" v-model="rb.selected" :value="bindex"/> <label :for="`rb_`+bindex">是</label></td>
+								<td><input type="text" class="uk-form-success" v-model="rb.key"/></td>
+								<td><input type="text" class="uk-form-danger" v-model="rb.value"/></td>
+								<td><button class="uk-button uk-button-danger" @click="del_req_body(bindex)">删除</button></td>
+							</tr>
+							</tbody>
+							<tfoot>
+							<tr>
+								<td><button class="uk-button uk-button-primary" @click="add_req_body">添加请求体</button></td>
+							</tr>
+							<tr>
+								<td>协议类型(PROXY):
+									<select v-model="req_proxy">
+										<option value="http">HTTP</option>
+										<option value="https">HTTPS</option>
+									</select>
+								</td>
+								<td>请求主机(HOST):<input type="text" class="uk-form-danger" v-model="req_host"/></td>
+								<td>请求URI:<input type="text" class="uk-form-success" v-model="req_uri"/></td>
+							</tr>
+							<tr>
+								<td>
+									并发请求次数(TIMES): <input type="number" min="1" max="20" step="1" class="uk-form-danger" v-model="req_times"/>
+								</td>
+								<td>
+									请求方式(METHOD):
+									<select v-model="req_method">
+										<option v-for="rm in req_methods" :value="rm.value">{{rm.title}}</option>
+									</select>
+								</td>
+								<td>
+									<button class="uk-button uk-button-danger" @click="send_request">发送请求</button>
+								</td>
+							</tr>
+							</tfoot>
+						</table>
+
+						<p>===============================</p>
+
+						<ul class="uk-subnav uk-subnav-pill" data-uk-switcher="{connect:'#my-id'}">
+							<li v-for="(rts,index) in res_status" :class="index==0?'uk-active':''"><a class="uk-button">{{index+1}}</a></li>
+						</ul>
+
+						<!-- 这是内容项目的容器 -->
+						<ul id="my-id" class="uk-switcher">
+							<li v-for="(rts,index) in res_status" :class="index==0?'uk-active':''">
+								<table class="uk-table uk-text-left">
+									<caption style="font-size:2rem;">响应头(RESPONSE_HEAD)</caption>
+									<thead>
+									<tr>
+										<th>键(KEY)</th>
+										<th>值(VALUE)</th>
+									</tr>
+									</thead>
+									<tbody>
+									<tr v-for="(rsh,key) in res_head[index]" :key="key">
+										<td>{{key}}</td>
+										<td>{{rsh}}</td>
+									</tr>
+									</tbody>
+								</table>
+
+								<table class="uk-table uk-text-left" v-if="typeof res_body[index] == 'string'">
+									<caption style="font-size:2rem;">响应体(RESPONSE_BODY)</caption>
+									<tbody>
+									<tr>
+										<td>{{res_body[index]}}</td>
+									</tr>
+									</tbody>
+								</table>
+								<table class="uk-table uk-text-left" v-else>
+									<caption style="font-size:2rem;">响应体(RESPONSE_BODY)</caption>
+									<thead>
+									<tr>
+										<th>键(KEY)</th>
+										<th>值(VALUE)</th>
+									</tr>
+									</thead>
+									<tbody>
+									<tr v-for="(rsb,bkey) in res_body[index]" :key="bkey">
+										<td>{{bkey}}</td>
+										<td>{{rsb}}</td>
+									</tr>
+									</tbody>
+								</table>
+							</li>
+						</ul>
+					</form>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+<script>
+	var vapp = new Vue({
+		el:'#vapp',
+		data:{
+			req_head:[
+				{selected:true,key:'appid',value:'123456'}
+			],
+			req_body:[
+                {selected:true,key:'user_name',value:'小王'}
+			],
+			res_head:[],
+			res_body:[],
+			res_status:[],
+			res_statusText:[],
+			req_method:0,
+			req_methods:[{value:0,title:'GET'},{value:1,title:'POST'}],
+			req_times:1,
+            req_proxy:'http',
+			req_host:'localhost',
+			req_uri:'/index/test/index',
+			input_stop:false
+		},
+		mounted:function(){
+            var rhead = localStorage.getItem('req_head');
+            var rbody = localStorage.getItem('req_body');
+            var rproxy = localStorage.getItem('req_proxy');
+            var rhost = localStorage.getItem('req_host');
+            var ruri = localStorage.getItem('req_uri');
+            var rmethod = localStorage.getItem('req_method');
+            this.req_head = JSON.parse(rhead==null?'[]':rhead);
+            this.req_body = JSON.parse(rbody==null?'[]':rbody);
+            this.req_proxy = rproxy;
+            this.req_host = rhost;
+            this.req_uri = ruri;
+            this.req_method = rmethod;
+		},
+		methods:{
+			add_req_head:function(){
+                this.req_head = this.req_head.concat({selected:true,key:'key',value:'value'});
+			},
+			del_req_head:function(index){
+                this.req_head.splice(index,1);
+			},
+            add_req_body:function(){
+                this.req_body = this.req_body.concat({selected:true,key:'key',value:'value'});
+            },
+            del_req_body:function(index){
+                this.req_body.splice(index,1);
+            },
+			send_request:function(){
+			    this.request_head();
+				switch(this.req_method){
+					case 1:
+                        for(var t = 0;t<this.req_times;t++){
+                            (function(_this){
+                                _this.request_post();
+                            })(this);
+                        }
+						break;
+					default:
+                        for(var t = 0;t<this.req_times;t++){
+                            (function(_this){
+                                _this.request_get();
+                            })(this);
+                        }
+						break;
+				}
+			},
+			request_head:function(){
+			    var _this = this;
+                axios.interceptors.request.use(function(config){
+                    for(var rh in _this.req_head){
+                        if(_this.req_head[rh].selected === false) continue;
+                        config.headers[_this.req_head[rh].key] = _this.req_head[rh].value;
+                    }
+                    return config;
+				},function(err){
+                    console.dir(err);
+				});
+			},
+			request_get:function(){
+			    var _this = this;
+			    console.log(this.req_body);
+                var query = '';
+			    if(this.req_body.length>0){
+			        query += '?';
+			        for(var reqb in this.req_body){
+                        if(this.req_body[reqb].selected === false) continue;
+			            query += this.req_body[reqb].key+'='+this.req_body[reqb].value+'&';
+					}
+					query = query.substr(0,query.length-1);
+				}
+                _this.res_status = [];
+                _this.res_statusText = [];
+                _this.res_head = [];
+                _this.res_body = [];
+				(function(_this){
+                    axios.get(_this.req_proxy+'://'+_this.req_host+_this.req_uri+query).then(function(res){
+                        _this.res_status = _this.res_status.concat(res.status);
+                        _this.res_statusText = _this.res_statusText.concat(res.statusText);
+                        _this.res_head = _this.res_head.concat(res.headers);
+                        _this.res_body = _this.res_body.concat(res.data);
+                    }).catch(function(err){
+                        UIkit.notify(err.message, {status:'danger'});
+                        console.dir(err);
+                    });
+				})(this);
+			},
+            request_post:function(){
+                var _this = this;
+                _this.res_status = [];
+                _this.res_statusText = [];
+                _this.res_head = [];
+                _this.res_body = [];
+                var req_params = {};
+                if(this.req_body.length>0){
+                    for(var reqb in this.req_body){
+                        if(this.req_body[reqb].selected === false) continue;
+                        req_params[this.req_body[reqb].key] = this.req_body[reqb].value;
+                    }
+                }
+                (function(_this){
+                    axios.post(_this.req_proxy+'://'+_this.req_host+_this.req_uri,req_params).then(function(res){
+                        _this.res_status = _this.res_status.concat(res.status);
+                        _this.res_statusText = _this.res_statusText.concat(res.statusText);
+                        _this.res_head = _this.res_head.concat(res.headers);
+                        _this.res_body = _this.res_body.concat(res.data);
+                    }).catch(function(err){
+                        UIkit.notify(err.message, {status:'danger'});
+                        console.dir(err);
+                    });
+                })(this);
+            }
+		},
+		watch:{
+            req_head:{
+				handler:function(nval,oval){
+                    localStorage.setItem('req_head',JSON.stringify(nval));
+				},
+				deep:true
+			},
+            req_body:{
+                handler:function(nval,oval){
+					localStorage.setItem('req_body',JSON.stringify(nval));
+				},
+				deep:true
+			},
+            req_method:function(nval,oval){
+                localStorage.setItem('req_method',nval);
+            },
+            req_proxy:function(nval,oval){
+                localStorage.setItem('req_proxy',nval);
+            },
+            req_host:function(nval,oval){
+                localStorage.setItem('req_host',nval);
+            },
+            req_uri:function(nval,oval){
+                localStorage.setItem('req_uri',nval);
+            }
+		}
+	});
+</script>
+<style>
+	html,body,*{
+		padding:0;margin:0;out-line:0;
+	}
+</style>
