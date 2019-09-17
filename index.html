@@ -94,6 +94,21 @@
 									<button class="uk-button uk-button-danger" @click="send_request">发送请求</button>
 								</td>
 							</tr>
+							<tr>
+								<td>
+									<button class="uk-button uk-button-success" @click="save_request(1)">新增记录</button>
+								</td>
+								<td>
+									<select @change="select_request" v-model="selected_history">
+										<option value="0">选择设置</option>
+										<option :value="hkey" v-for="(his,hkey) in request_history" :key="hkey">{{his.req_proxy+'://'+his.req_host+his.req_uri+' ('+hkey+')'}}</option>
+									</select>
+								</td>
+								<td>
+									<button class="uk-button uk-button-success" @click="save_request(0)" v-if="selected_history!=0">替换保存</button>
+									<button class="uk-button uk-button-danger" @click="save_request(2)" v-if="selected_history!=0">删除记录</button>
+								</td>
+							</tr>
 							</tfoot>
 						</table>
 
@@ -173,7 +188,9 @@
             req_proxy:'http',
 			req_host:'localhost',
 			req_uri:'',
-			input_stop:false
+			input_stop:false,
+			request_history:{},
+            selected_history:0
 		},
 		mounted:function(){
             var rhead = localStorage.getItem('req_head');
@@ -188,6 +205,11 @@
             if(rhost)this.req_host = rhost;
             if(ruri)this.req_uri = ruri;
             if(rmethod)this.req_method = rmethod;
+            var history = localStorage.getItem('request_history');
+            if(history==null) history = '{}';
+            this.request_history = JSON.parse(history);
+            var selected = localStorage.getItem('selected_history');
+            if(selected!=null) this.selected_history = selected;
 		},
 		methods:{
 			add_req_head:function(){
@@ -220,6 +242,36 @@
                         }
 						break;
 				}
+			},
+			save_request:function(type){
+			    var dt = this.selected_history;
+			    var history = this.request_history;
+			    console.log(dt);
+                console.log(type);
+			    if(type==1){
+                    var date = new Date();
+                    dt = date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds();
+				}
+				if(type==2){
+			        delete(history[dt]);
+                    this.selected_history = 0;
+				}else{
+                    history[dt] = {req_head:this.req_head,req_body:this.req_body,req_method:this.req_method,req_times:this.req_times,req_proxy:this.req_proxy,req_host:this.req_host,req_uri:this.req_uri};
+                    this.selected_history = dt;
+			    }
+                this.request_history = {};
+				this.request_history = history;
+			},
+            select_request:function(){
+			    if(this.selected_history!=0){
+			        this.req_head = this.request_history[this.selected_history].req_head;
+                    this.req_body = this.request_history[this.selected_history].req_body;
+                    this.req_times = this.request_history[this.selected_history].req_times;
+                    this.req_proxy = this.request_history[this.selected_history].req_proxy;
+                    this.req_host = this.request_history[this.selected_history].req_host;
+                    this.req_uri = this.request_history[this.selected_history].req_uri;
+				}
+                localStorage.setItem('selected_history',this.selected_history);
 			},
 			request_head:function(){
 			    var _this = this;
@@ -297,6 +349,13 @@
             req_body:{
                 handler:function(nval,oval){
 					localStorage.setItem('req_body',JSON.stringify(nval));
+				},
+				deep:true
+			},
+            request_history:{
+                handler:function(nval,oval){
+                    localStorage.setItem('request_history',JSON.stringify(nval));
+                    console.log(this.request_history);
 				},
 				deep:true
 			},
